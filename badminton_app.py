@@ -167,7 +167,7 @@ if (user_role == "Reporting User" or user_role == "Admin") and authorized:
             for session in month_sessions:
                 for player in session['attendees']:
                     if player not in report_card:
-                        report_card[player] = {"Games": 0, "Owes (€)": 0.0}
+                        report_card[player] = {"Sessions": 0, "Owes (€)": 0.0}
                     
                     report_card[player]["Games"] += 1
                     report_card[player]["Owes (€)"] += session['cost_per_person']
