@@ -100,7 +100,7 @@ if user_role == "Admin" and authorized:
         button_label = "Update Session"
     else:
         st.write(f"🆕 Creating NEW session for {date_str}.")
-        default_cost = 13.0
+        default_cost = 13.10
         default_attendees = []
         button_label = "Save Session"
 
