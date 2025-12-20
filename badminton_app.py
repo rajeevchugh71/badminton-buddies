@@ -169,7 +169,7 @@ if (user_role == "Reporting User" or user_role == "Admin") and authorized:
                     if player not in report_card:
                         report_card[player] = {"Sessions": 0, "Owes (€)": 0.0}
                     
-                    report_card[player]["Games"] += 1
+                    report_card[player]["games"] += 1
                     report_card[player]["Owes (€)"] += session['cost_per_person']
             
             df_summary = pd.DataFrame.from_dict(report_card, orient='index')
