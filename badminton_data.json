@@ -1,1 +1,56 @@
-{"buddies": ["Paul", "Martial", "Ren\u00e9", "Rajeev"], "sessions": [{"date": "2025-12-14", "month": "2025-12", "total_cost": 13.1, "attendees": ["Paul", "Martial"], "cost_per_person": 6.55}, {"date": "2025-11-16", "month": "2025-11", "total_cost": 13.1, "attendees": ["Ren\u00e9", "Rajeev"], "cost_per_person": 6.55}, {"date": "2025-11-16", "month": "2025-11", "total_cost": 13.1, "attendees": ["Ren\u00e9"], "cost_per_person": 13.1}, {"date": "2025-11-16", "month": "2025-11", "total_cost": 13.1, "attendees": ["Paul"], "cost_per_person": 13.1}]}
+{
+    "buddies": [
+        "Paul",
+        "Martial",
+        "René",
+        "Rajeev"
+    ],
+    "sessions": [
+        {
+            "date": "2025-11-09",
+            "month": "2025-11",
+            "total_cost": 13.0,
+            "attendees": [
+                "Paul",
+                "Martial"
+            ],
+            "cost_per_person": 6.5
+        },
+        {
+            "date": "2025-11-16",
+            "month": "2025-11",
+            "total_cost": 13.1,
+            "attendees": [
+                "Paul",
+                "Martial",
+                "René",
+                "Rajeev"
+            ],
+            "cost_per_person": 3.275
+        },
+        {
+            "date": "2025-12-14",
+            "month": "2025-12",
+            "total_cost": 13.1,
+            "attendees": [
+                "Paul",
+                "Martial",
+                "René",
+                "Rajeev"
+            ],
+            "cost_per_person": 3.275
+        },
+        {
+            "date": "2025-12-21",
+            "month": "2025-12",
+            "total_cost": 13.1,
+            "attendees": [
+                "Paul",
+                "Martial",
+                "René",
+                "Rajeev"
+            ],
+            "cost_per_person": 3.275
+        }
+    ]
+}
