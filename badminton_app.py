@@ -1,27 +1,79 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 import json
-import os
 
-# --- PART 1: SETUP (The Database) ---
-DB_FILE = 'badminton_data.json'
+# --- PART 1: SETUP (Google Sheets Connection) ---
+# We use the "Secrets" we saved in Streamlit Cloud
+# This function connects to the sheet safely.
+def get_db():
+    # 1. Access the secrets
+    print("Before Access the secrets...")
 
-def load_data():
-    if not os.path.exists(DB_FILE):
-        return {"buddies": [], "sessions": []}
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    try:
+        creds_dict = dict(st.secrets["gcp_service_account"]) # Reads the secret you saved
+    except Exception as e:
+        st.error("Google Cloud credentials not found. Please set up the secrets correctly.")
+        st.stop()
+
+    print("After Access the secrets...") 
+
+    # 2. Create the connection
+    try:
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        client = gspread.authorize(creds)
+    except Exception as e:
+        st.error("Failed to authorize Google Sheets client. Check your credentials.")
+        st.stop()
+
+    print("Create the connection...")
     
-    # FIX: We added encoding='utf-8' here
-    with open(DB_FILE, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    # 3. Open the sheet
+    # Make sure your Google Sheet is named EXACTLY "Badminton DB"
+    try:
+        sheet = client.open("Badminton DB").sheet1 
+    except Exception as e:
+        st.error("Could not find the Google Sheet named 'Badminton DB'. Please create it and share access with the bot email.")
+        st.stop()
+        
+    print("Connected to Google Sheet successfully.")
+    return sheet
 
+# Helper to read data safely
+def load_data():
+    print("Before Loading data from Google Sheets...")
+    sheet = get_db()
+    print("After Loading data from Google Sheets...")
+    # We expect the data in the first cell as a giant text blob (simplest way to migrate)
+    # Ideally, we would use rows/cols, but to keep your code logic same, 
+    # we will store the JSON string in Cell A1.
+    
+    try:
+        raw_data = sheet.acell('A1').value
+        if not raw_data:
+            # If empty, return default structure
+            return {"buddies": [], "sessions": []}
+        return json.loads(raw_data)
+    except Exception as e:
+        return {"buddies": [], "sessions": []}
+
+# Helper to save data
 def save_data(data):
-    # FIX: We added encoding='utf-8' and ensure_ascii=False
-    # ensure_ascii=False makes the text file readable for humans (shows 'é' instead of codes)
-    with open(DB_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+    sheet = get_db()
+    # Convert our data back to text and save in Cell A1
+    json_str = json.dumps(data, ensure_ascii=False)
+    sheet.update_acell('A1', json_str)
 
-data = load_data()
+# Load data once at the start
+print("Starting Badminton App...")
+try:
+    data = load_data()
+except Exception as e:
+    st.error("Could not connect to Google Sheet. Did you share 'Badminton DB' with the bot email?")
+    st.stop()
 
 # --- PART 2: THE SIDEBAR (Login) ---
 st.title("🏸 Badminton Buddies")
@@ -65,14 +117,13 @@ if user_role == "Admin" and authorized:
         buddy_to_remove = st.selectbox("Select Buddy to Remove", ["Select..."] + data["buddies"])
         
         if buddy_to_remove != "Select...":
-            # Check history
             games_played = 0
             for s in data["sessions"]:
                 if buddy_to_remove in s["attendees"]:
                     games_played += 1
             
             if games_played > 0:
-                st.warning(f"⚠️ Warning: {buddy_to_remove} is recorded in {games_played} past sessions. Deleting them will remove them from the 'Active List', but they will remain in historical reports.")
+                st.warning(f"⚠️ Warning: {buddy_to_remove} is recorded in {games_played} past sessions.")
             
             if st.button(f"Confirm Delete '{buddy_to_remove}'"):
                 data["buddies"].remove(buddy_to_remove)
@@ -85,14 +136,11 @@ if user_role == "Admin" and authorized:
     # B. Record or Edit a Session
     st.subheader("Record / Edit Session")
     
-    # 1. Pick the date
     session_date = st.date_input("Select Date", datetime.today())
     date_str = str(session_date)
 
-    # 2. Check for existing data
     existing_session = next((s for s in data["sessions"] if s["date"] == date_str), None)
 
-    # 3. Set defaults
     if existing_session:
         st.info(f"📅 Editing record for {date_str}.")
         default_cost = float(existing_session["total_cost"])
@@ -100,11 +148,10 @@ if user_role == "Admin" and authorized:
         button_label = "Update Session"
     else:
         st.write(f"🆕 Creating NEW session for {date_str}.")
-        default_cost = 13.10
+        default_cost = 13.0
         default_attendees = []
         button_label = "Save Session"
 
-    # 4. The Form
     court_cost = st.number_input("Court Cost (€)", value=default_cost, step=0.5)
     
     st.write("Who played?")
@@ -119,7 +166,6 @@ if user_role == "Admin" and authorized:
             if st.checkbox(buddy, key=unique_key, value=is_checked):
                 attendees.append(buddy)
             
-    # 5. Save Logic
     if st.button(button_label):
         if len(attendees) > 0:
             if existing_session:
@@ -139,7 +185,7 @@ if user_role == "Admin" and authorized:
             data["sessions"] = sorted(data["sessions"], key=lambda x: x['date'])
             
             save_data(data)
-            st.success(f"Session for {date_str} saved!")
+            st.success(f"Session for {date_str} saved to Google Sheets!")
             st.rerun()
         else:
             st.error("Select at least one buddy.")
@@ -155,12 +201,9 @@ if (user_role == "Reporting User" or user_role == "Admin") and authorized:
         st.info("No games played yet.")
     else:
         selected_month = st.selectbox("Select Month", available_months)
-        
-        # Filter sessions
         month_sessions = [s for s in data['sessions'] if s['month'] == selected_month]
         
         if month_sessions:
-            # --- TAB 1: SUMMARY ---
             st.subheader(f"Summary for {selected_month}")
             report_card = {}
             
@@ -168,7 +211,6 @@ if (user_role == "Reporting User" or user_role == "Admin") and authorized:
                 for player in session['attendees']:
                     if player not in report_card:
                         report_card[player] = {"Games": 0, "Owes (€)": 0.0}
-                    
                     report_card[player]["Games"] += 1
                     report_card[player]["Owes (€)"] += session['cost_per_person']
             
@@ -179,7 +221,6 @@ if (user_role == "Reporting User" or user_role == "Admin") and authorized:
             total_month_cost = sum(s['total_cost'] for s in month_sessions)
             st.caption(f"Total Court Fees Paid this month: {total_month_cost}€")
 
-            # --- TAB 2: HISTORY ---
             st.write("---")
             with st.expander("View Detailed Session History", expanded=False):
                 history_data = []
@@ -196,6 +237,5 @@ if (user_role == "Reporting User" or user_role == "Admin") and authorized:
         else:
             st.warning("No data found for this month.")
 
-# --- PART 5: GUEST VIEW ---
 if user_role == "Guest":
     st.write("Please log in to view data.")
