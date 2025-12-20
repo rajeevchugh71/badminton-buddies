@@ -10,16 +10,12 @@ import json
 # This function connects to the sheet safely.
 def get_db():
     # 1. Access the secrets
-    print("Before Access the secrets...")
-
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     try:
         creds_dict = dict(st.secrets["gcp_service_account"]) # Reads the secret you saved
     except Exception as e:
         st.error("Google Cloud credentials not found. Please set up the secrets correctly.")
         st.stop()
-
-    print("After Access the secrets...") 
 
     # 2. Create the connection
     try:
@@ -29,8 +25,7 @@ def get_db():
         st.error("Failed to authorize Google Sheets client. Check your credentials.")
         st.stop()
 
-    print("Create the connection...")
-    
+   
     # 3. Open the sheet
     # Make sure your Google Sheet is named EXACTLY "Badminton DB"
     try:
@@ -38,15 +33,12 @@ def get_db():
     except Exception as e:
         st.error("Could not find the Google Sheet named 'Badminton DB'. Please create it and share access with the bot email.")
         st.stop()
-        
-    print("Connected to Google Sheet successfully.")
+
     return sheet
 
 # Helper to read data safely
 def load_data():
-    print("Before Loading data from Google Sheets...")
     sheet = get_db()
-    print("After Loading data from Google Sheets...")
     # We expect the data in the first cell as a giant text blob (simplest way to migrate)
     # Ideally, we would use rows/cols, but to keep your code logic same, 
     # we will store the JSON string in Cell A1.
@@ -68,7 +60,6 @@ def save_data(data):
     sheet.update_acell('A1', json_str)
 
 # Load data once at the start
-print("Starting Badminton App...")
 try:
     data = load_data()
 except Exception as e:
