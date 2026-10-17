@@ -6,18 +6,14 @@ from oauth2client.service_account import ServiceAccountCredentials
 import json
 
 # --- PART 1: SETUP (Google Sheets Connection) ---
-# We use the "Secrets" we saved in Streamlit Cloud
-# This function connects to the sheet safely.
 def get_db():
-    # 1. Access the secrets
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     try:
-        creds_dict = dict(st.secrets["gcp_service_account"]) # Reads the secret you saved
+        creds_dict = dict(st.secrets["gcp_service_account"])
     except Exception as e:
         st.error("Google Cloud credentials not found. Please set up the secrets correctly.")
         st.stop()
 
-    # 2. Create the connection
     try:
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         client = gspread.authorize(creds)
@@ -25,9 +21,6 @@ def get_db():
         st.error("Failed to authorize Google Sheets client. Check your credentials.")
         st.stop()
 
-   
-    # 3. Open the sheet
-    # Make sure your Google Sheet is named EXACTLY "Badminton DB"
     try:
         sheet = client.open("Badminton DB").sheet1 
     except Exception as e:
@@ -36,26 +29,18 @@ def get_db():
 
     return sheet
 
-# Helper to read data safely
 def load_data():
     sheet = get_db()
-    # We expect the data in the first cell as a giant text blob (simplest way to migrate)
-    # Ideally, we would use rows/cols, but to keep your code logic same, 
-    # we will store the JSON string in Cell A1.
-    
     try:
         raw_data = sheet.acell('A1').value
         if not raw_data:
-            # If empty, return default structure
             return {"buddies": [], "sessions": []}
         return json.loads(raw_data)
     except Exception as e:
         return {"buddies": [], "sessions": []}
 
-# Helper to save data
 def save_data(data):
     sheet = get_db()
-    # Convert our data back to text and save in Cell A1
     json_str = json.dumps(data, ensure_ascii=False)
     sheet.update_acell('A1', json_str)
 
@@ -75,7 +60,6 @@ password = ""
 if user_role in ["Admin", "Reporting User"]:
     password = st.sidebar.text_input("Password", type="password")
 
-# Check password
 authorized = False
 if user_role == "Admin" and password == "admin123":
     authorized = True
@@ -134,17 +118,33 @@ if user_role == "Admin" and authorized:
 
     if existing_session:
         st.info(f"📅 Editing record for {date_str}.")
-        default_cost = float(existing_session["total_cost"])
+        default_court_count = existing_session.get("num_courts", 1)
+        default_court_rate = float(existing_session.get("court_rate", 13.10))
+        default_shuttle_cost = float(existing_session.get("shuttle_cost", 0.0))
         default_attendees = existing_session["attendees"]
         button_label = "Update Session"
     else:
         st.write(f"🆕 Creating NEW session for {date_str}.")
-        default_cost = 13.10
+        default_court_count = 1
+        default_court_rate = 13.10
+        default_shuttle_cost = 0.0
         default_attendees = []
         button_label = "Save Session"
 
-    court_cost = st.number_input("Court Cost (€)", value=default_cost, step=0.5)
+    # Inputs for court count, court price, and shuttlecock costs
+    col_courts, col_rate, col_shuttle = st.columns(3)
     
+    with col_courts:
+        num_courts = st.selectbox("Courts Booked", options=[1, 2], index=0 if default_court_count == 1 else 1)
+    with col_rate:
+        court_rate = st.number_input("Rate per Court (€)", value=default_court_rate, min_value=0.0, step=0.5)
+    with col_shuttle:
+        shuttle_cost = st.number_input("Shuttlecocks Cost (€)", value=default_shuttle_cost, min_value=0.0, step=0.5)
+
+    total_calculated_cost = (num_courts * court_rate) + shuttle_cost
+    st.write(f"**Total Session Cost:** €{total_calculated_cost:.2f} *(Courts: €{num_courts * court_rate:.2f} + Shuttles: €{shuttle_cost:.2f})*")
+
+    st.write("---")
     st.write("Who played?")
     attendees = []
     
@@ -162,12 +162,15 @@ if user_role == "Admin" and authorized:
             if existing_session:
                 data["sessions"].remove(existing_session)
 
-            cost_per_person = court_cost / len(attendees)
+            cost_per_person = total_calculated_cost / len(attendees)
             
             new_session = {
                 "date": date_str,
                 "month": session_date.strftime("%Y-%m"),
-                "total_cost": court_cost,
+                "num_courts": num_courts,
+                "court_rate": court_rate,
+                "shuttle_cost": shuttle_cost,
+                "total_cost": total_calculated_cost,
                 "attendees": attendees,
                 "cost_per_person": cost_per_person
             }
@@ -210,7 +213,7 @@ if (user_role == "Reporting User" or user_role == "Admin") and authorized:
             st.table(df_summary)
             
             total_month_cost = sum(s['total_cost'] for s in month_sessions)
-            st.caption(f"Total Court Fees Paid this month: {total_month_cost}€")
+            st.caption(f"Total Fees (Courts + Shuttles) for this month: €{total_month_cost:.2f}")
 
             st.write("---")
             with st.expander("View Detailed Session History", expanded=False):
@@ -218,7 +221,10 @@ if (user_role == "Reporting User" or user_role == "Admin") and authorized:
                 for session in month_sessions:
                     history_data.append({
                         "Date": session["date"],
-                        "Total Cost (€)": session["total_cost"],
+                        "Courts": session.get("num_courts", 1),
+                        "Court Fee (€)": session.get("court_rate", session["total_cost"]),
+                        "Shuttles (€)": session.get("shuttle_cost", 0.0),
+                        "Total (€)": round(session["total_cost"], 2),
                         "Cost/Person (€)": round(session["cost_per_person"], 2),
                         "Attendees": ", ".join(session["attendees"])
                     })
