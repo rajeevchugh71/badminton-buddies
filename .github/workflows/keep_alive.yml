@@ -1,0 +1,17 @@
+name: Keep Streamlit App Awake
+
+on:
+  schedule:
+    # Runs at minute 0 past every 6th hour (00:00, 06:00, 12:00, 18:00 UTC)
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Enables a manual "Run workflow" button in the GitHub UI
+
+jobs:
+  ping-app:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Streamlit URL
+        run: |
+          URL="https://rajeevchugh71-badminton-buddies-badminton-app-kdxxkc.streamlit.app/"
+          STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" "$URL")
+          echo "Pinged $URL - Response code: $STATUS"
