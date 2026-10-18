@@ -77,7 +77,7 @@ font_size_option = st.sidebar.selectbox("Font Size", ["Normal", "Large", "Extra 
 if font_size_option == "Large":
     font_size_css = "html { font-size: 18px !important; }"
 elif font_size_option == "Extra Large":
-    font_size_css = "html { font-size: 20px !important; }"
+    font_size_css = "html { font-size: 22px !important; }"
 else:
     font_size_css = "html { font-size: 16px !important; }"
 
@@ -134,14 +134,14 @@ if user_role == "Admin" and authorized:
     if existing_session:
         st.info(f"📅 Editing record for {date_str}.")
         default_court_count = existing_session.get("num_courts", 1)
-        default_court_rate = float(existing_session.get("court_rate", 13.10))
+        default_court_rate = float(existing_session.get("court_rate", 13.50))
         default_shuttle_cost = float(existing_session.get("shuttle_cost", 0.0))
         default_attendees = existing_session["attendees"]
         button_label = "Update Session"
     else:
         st.write(f"🆕 Creating NEW session for {date_str}.")
         default_court_count = 1
-        default_court_rate = 13.10
+        default_court_rate = 13.50
         default_shuttle_cost = 0.0
         default_attendees = []
         button_label = "Save Session"
