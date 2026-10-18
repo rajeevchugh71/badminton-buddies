@@ -51,7 +51,7 @@ except Exception as e:
     st.error("Could not connect to Google Sheet. Did you share 'Badminton DB' with the bot email?")
     st.stop()
 
-# --- PART 2: THE SIDEBAR (Login) ---
+# --- PART 2: THE SIDEBAR (Login & Settings) ---
 st.title("🏸 Badminton Buddies")
 
 user_role = st.sidebar.selectbox("Login As:", ["Guest", "Admin", "Reporting User"])
@@ -67,6 +67,21 @@ elif user_role == "Reporting User" and password == "report123":
     authorized = True
 elif user_role != "Guest":
     st.sidebar.error("Wrong password")
+
+# Font Size Adjustment Setting
+st.sidebar.markdown("---")
+st.sidebar.subheader("Display Settings")
+font_size_option = st.sidebar.selectbox("Font Size", ["Normal", "Large", "Extra Large"], index=0)
+
+# Apply font size styling via CSS
+if font_size_option == "Large":
+    font_size_css = "html { font-size: 18px !important; }"
+elif font_size_option == "Extra Large":
+    font_size_css = "html { font-size: 20px !important; }"
+else:
+    font_size_css = "html { font-size: 16px !important; }"
+
+st.markdown(f"<style>{font_size_css}</style>", unsafe_allow_html=True)
 
 # --- PART 3: ADMIN AREA (Record/Edit) ---
 if user_role == "Admin" and authorized:
@@ -126,7 +141,7 @@ if user_role == "Admin" and authorized:
     else:
         st.write(f"🆕 Creating NEW session for {date_str}.")
         default_court_count = 1
-        default_court_rate = 13.50
+        default_court_rate = 13.10
         default_shuttle_cost = 0.0
         default_attendees = []
         button_label = "Save Session"
@@ -236,3 +251,4 @@ if (user_role == "Reporting User" or user_role == "Admin") and authorized:
 
 if user_role == "Guest":
     st.write("Please log in to view data.")
+    
