@@ -71,7 +71,7 @@ elif user_role != "Guest":
 # Font Size Adjustment Setting
 st.sidebar.markdown("---")
 st.sidebar.subheader("Display Settings")
-font_size_option = st.sidebar.selectbox("Font Size", ["Normal", "Large", "Extra Large"], index=0)
+font_size_option = st.sidebar.selectbox("Font Size", ["Extra Large", "Large", "Normal"], index=0)
 
 # Apply font size styling via CSS
 if font_size_option == "Large":
